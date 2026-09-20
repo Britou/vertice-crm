@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, LoaderCircle, Plus, Trash2, Users } from "lucide-react";
+import { Building2, LoaderCircle, Plus, Search, Trash2, Users, X, } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -63,6 +63,11 @@ export default function Home() {
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [requestError, setRequestError] = useState("");
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<LeadStatus | "TODOS">(
+    "TODOS",
+  );
+
   const {
     data: leads = [],
     isLoading,
@@ -107,6 +112,24 @@ export default function Home() {
       activeValue,
     };
   }, [leads]);
+
+  const filteredLeads = useMemo(() => {
+  const normalizedSearch = searchTerm.trim().toLocaleLowerCase("pt-BR");
+
+  return leads.filter((lead) => {
+    const matchesSearch =
+      !normalizedSearch ||
+      [lead.name, lead.company, lead.email ?? "", lead.phone ?? ""].some(
+        (value) =>
+          value.toLocaleLowerCase("pt-BR").includes(normalizedSearch),
+      );
+
+    const matchesStatus =
+      statusFilter === "TODOS" || lead.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+}, [leads, searchTerm, statusFilter]);
 
   const visibleError =
   requestError || (loadError ? getErrorMessage(loadError) : "");
@@ -288,12 +311,51 @@ export default function Home() {
             </div>
           )}
 
+          <div className="mb-6 grid gap-3 sm:grid-cols-[1fr_190px]">
+            <div className="flex items-center rounded-xl border border-slate-200 bg-white px-3 shadow-sm focus-within:border-violet-500 focus-within:ring-4 focus-within:ring-violet-100">
+              <Search className="h-5 w-5 shrink-0 text-slate-400" />
+              <input
+                aria-label="Buscar leads"
+                className="w-full bg-transparent px-3 py-3 text-sm outline-none"
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Buscar por nome, empresa, e-mail ou telefone"
+                value={searchTerm}
+              />
+              {searchTerm && (
+                <button
+                  aria-label="Limpar busca"
+                  className="rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                  onClick={() => setSearchTerm("")}
+                  type="button"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            <select
+              aria-label="Filtrar por status"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-medium shadow-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
+              onChange={(event) =>
+                setStatusFilter(event.target.value as LeadStatus | "TODOS")
+              }
+              value={statusFilter}
+            >
+              <option value="TODOS">Todos os status</option>
+              {leadStatuses.map((status) => (
+                <option key={status} value={status}>
+                  {statusLabels[status]}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
               <div>
                 <h3 className="font-bold">Leads recentes</h3>
                 <p className="text-sm text-slate-500">
-                  Dados conectados ao MongoDB
+                  Exibindo {filteredLeads.length} de {leads.length} leads
                 </p>
               </div>
               <Users className="h-5 w-5 text-slate-400" />
@@ -312,9 +374,17 @@ export default function Home() {
                   Use o formulário para registrar a primeira oportunidade.
                 </p>
               </div>
+            ) : filteredLeads.length === 0 ? (
+              <div className="p-12 text-center">
+                <Search className="mx-auto h-10 w-10 text-slate-300" />
+                <h4 className="mt-4 font-bold">Nenhum resultado encontrado</h4>
+                <p className="mt-1 text-sm text-slate-500">
+                  Ajuste a busca ou selecione outro status.
+                </p>
+              </div>
             ) : (
               <div className="divide-y divide-slate-100">
-                {leads.map((lead) => (
+              {filteredLeads.map((lead) => (
                   <article
                     className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"
                     key={lead._id}
