@@ -1,69 +1,401 @@
-import Image from "next/image";
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
+import { Building2, LoaderCircle, Plus, Trash2, Users } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { api } from "@/lib/api";
+import {
+  leadSources,
+  leadStatuses,
+  type CreateLeadInput,
+  type Lead,
+  type LeadSource,
+  type LeadStatus,
+} from "@/types/lead";
+
+const leadFormSchema = z.object({
+  name: z.string().trim().min(2, "Informe o nome do contato."),
+  company: z.string().trim().min(2, "Informe a empresa."),
+  email: z.union([z.email("Informe um e-mail válido."), z.literal("")]),
+  phone: z.string().trim(),
+  source: z.enum(leadSources),
+  estimatedValue: z.number().nonnegative("O valor não pode ser negativo."),
+});
+
+type LeadFormData = z.infer<typeof leadFormSchema>;
+
+const statusLabels: Record<LeadStatus, string> = {
+  NOVO: "Novo",
+  CONTATO: "Em contato",
+  PROPOSTA: "Proposta",
+  GANHO: "Ganho",
+  PERDIDO: "Perdido",
+};
+
+const sourceLabels: Record<LeadSource, string> = {
+  SITE: "Site",
+  INDICACAO: "Indicação",
+  INSTAGRAM: "Instagram",
+  OUTRO: "Outro",
+};
+
+function getErrorMessage(error: unknown) {
+  if (axios.isAxiosError(error)) {
+    return error.response?.data?.message ?? "Não foi possível concluir a ação.";
+  }
+
+  return "Ocorreu um erro inesperado.";
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
 
 export default function Home() {
+  const [isUpdatingId, setIsUpdatingId] = useState<string | null>(null);
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+  const [requestError, setRequestError] = useState("");
+
+  const {
+    data: leads = [],
+    isLoading,
+    error: loadError,
+    refetch,
+  } = useQuery({
+    queryKey: ["leads"],
+    queryFn: async () => {
+      const response = await api.get<Lead[]>("/api/leads");
+      return response.data;
+    },
+  });
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<LeadFormData>({
+    resolver: zodResolver(leadFormSchema),
+    defaultValues: {
+      name: "",
+      company: "",
+      email: "",
+      phone: "",
+      source: "OUTRO",
+      estimatedValue: 0,
+    },
+  });
+
+  const metrics = useMemo(() => {
+    const inProposal = leads.filter((lead) => lead.status === "PROPOSTA");
+    const activeValue = leads
+      .filter(
+        (lead) => lead.status !== "GANHO" && lead.status !== "PERDIDO",
+      )
+      .reduce((total, lead) => total + lead.estimatedValue, 0);
+
+    return {
+      total: leads.length,
+      proposals: inProposal.length,
+      activeValue,
+    };
+  }, [leads]);
+
+  const visibleError =
+  requestError || (loadError ? getErrorMessage(loadError) : "");
+
+  async function onSubmit(data: LeadFormData) {
+    try {
+      setRequestError("");
+
+      const payload: CreateLeadInput = {
+        ...data,
+        email: data.email || undefined,
+        phone: data.phone || undefined,
+      };
+
+      await api.post<Lead>("/api/leads", payload);
+      await refetch();
+      reset();
+    } catch (error) {
+      setRequestError(getErrorMessage(error));
+    }
+  }
+
+  async function updateLeadStatus(id: string, status: LeadStatus) {
+    try {
+      setRequestError("");
+      setIsUpdatingId(id);
+
+      await api.patch<Lead>(`/api/leads/${id}`, { status });
+      await refetch();
+    } catch (error) {
+      setRequestError(getErrorMessage(error));
+    } finally {
+      setIsUpdatingId(null);
+    }
+  }
+
+  async function deleteLead(id: string) {
+    const shouldDelete = window.confirm(
+      "Deseja excluir este lead permanentemente?",
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    try {
+      setRequestError("");
+      setIsDeletingId(id);
+
+      await api.delete(`/api/leads/${id}`);
+      await refetch();
+    } catch (error) {
+      setRequestError(getErrorMessage(error));
+    } finally {
+      setIsDeletingId(null);
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-slate-50 text-slate-950">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-violet-600 font-bold text-white">
+              V
+            </span>
+            <div>
+              <p className="text-lg font-bold tracking-tight">Vértice</p>
+              <p className="text-sm text-slate-500">CRM de relacionamentos</p>
+            </div>
+          </div>
+
+          <span className="rounded-full bg-violet-50 px-3 py-1 text-sm font-semibold text-violet-700">
+            Leads
+          </span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+      </header>
+
+      <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[360px_1fr]">
+        <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-6">
+            <p className="text-sm font-semibold text-violet-700">
+              Novo relacionamento
+            </p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight">
+              Cadastre um lead
+            </h1>
+          </div>
+
+          <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+            <Field label="Nome" error={errors.name?.message}>
+              <input
+                className="input"
+                placeholder="Ex.: Mariana Costa"
+                {...register("name")}
+              />
+            </Field>
+
+            <Field label="Empresa" error={errors.company?.message}>
+              <input
+                className="input"
+                placeholder="Ex.: Orla Studio"
+                {...register("company")}
+              />
+            </Field>
+
+            <Field label="E-mail" error={errors.email?.message}>
+              <input
+                className="input"
+                placeholder="contato@empresa.com"
+                type="email"
+                {...register("email")}
+              />
+            </Field>
+
+            <Field label="Telefone">
+              <input
+                className="input"
+                placeholder="(00) 00000-0000"
+                {...register("phone")}
+              />
+            </Field>
+
+            <Field label="Origem">
+              <select className="input" {...register("source")}>
+                {leadSources.map((source) => (
+                  <option key={source} value={source}>
+                    {sourceLabels[source]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Valor estimado" error={errors.estimatedValue?.message}>
+              <input
+                className="input"
+                min="0"
+                step="0.01"
+                type="number"
+                {...register("estimatedValue", { valueAsNumber: true })}
+              />
+            </Field>
+
+            <button
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSubmitting}
+              type="submit"
+            >
+              {isSubmitting ? (
+                <LoaderCircle className="h-5 w-5 animate-spin" />
+              ) : (
+                <Plus className="h-5 w-5" />
+              )}
+              Adicionar lead
+            </button>
+          </form>
+        </aside>
+
+        <section>
+          <div className="mb-8">
+            <p className="text-sm font-semibold text-violet-700">Visão geral</p>
+            <h2 className="mt-1 text-3xl font-bold tracking-tight">
+              Acompanhe suas oportunidades
+            </h2>
+          </div>
+
+          <div className="mb-8 grid gap-4 sm:grid-cols-3">
+            <Metric label="Leads cadastrados" value={String(metrics.total)} />
+            <Metric label="Em proposta" value={String(metrics.proposals)} />
+            <Metric
+              label="Valor em negociação"
+              value={formatCurrency(metrics.activeValue)}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+          </div>
+
+          {visibleError && (
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {visibleError}
+            </div>
+          )}
+
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+              <div>
+                <h3 className="font-bold">Leads recentes</h3>
+                <p className="text-sm text-slate-500">
+                  Dados conectados ao MongoDB
+                </p>
+              </div>
+              <Users className="h-5 w-5 text-slate-400" />
+            </div>
+
+            {isLoading ? (
+              <div className="flex items-center justify-center gap-2 p-12 text-slate-500">
+                <LoaderCircle className="h-5 w-5 animate-spin" />
+                Carregando leads...
+              </div>
+            ) : leads.length === 0 ? (
+              <div className="p-12 text-center">
+                <Building2 className="mx-auto h-10 w-10 text-slate-300" />
+                <h4 className="mt-4 font-bold">Nenhum lead cadastrado</h4>
+                <p className="mt-1 text-sm text-slate-500">
+                  Use o formulário para registrar a primeira oportunidade.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {leads.map((lead) => (
+                  <article
+                    className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"
+                    key={lead._id}
+                  >
+                    <div>
+                      <h4 className="font-bold">{lead.name}</h4>
+                      <p className="text-sm text-slate-500">
+                        {lead.company} · {sourceLabels[lead.source]}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-slate-700">
+                        {formatCurrency(lead.estimatedValue)}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <select
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold"
+                        disabled={isUpdatingId === lead._id}
+                        onChange={(event) =>
+                          void updateLeadStatus(
+                            lead._id,
+                            event.target.value as LeadStatus,
+                          )
+                        }
+                        value={lead.status}
+                      >
+                        {leadStatuses.map((status) => (
+                          <option key={status} value={status}>
+                            {statusLabels[status]}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        aria-label={`Excluir ${lead.name}`}
+                        className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                        disabled={isDeletingId === lead._id}
+                        onClick={() => void deleteLead(lead._id)}
+                        type="button"
+                      >
+                        {isDeletingId === lead._id ? (
+                          <LoaderCircle className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-semibold">{label}</span>
+      {children}
+      {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
+    </label>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p className="text-sm text-slate-500">{label}</p>
+      <p className="mt-2 text-2xl font-bold tracking-tight">{value}</p>
+    </article>
   );
 }
