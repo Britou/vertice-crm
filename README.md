@@ -106,6 +106,17 @@ MONGODB_URI=sua_uri_do_mongodb
 
 A API ficará disponível em `http://localhost:3333`.
 
+### Dados fictícios
+
+Para preencher o Vértice com oito oportunidades de demonstração:
+
+```bash
+cd api
+npm run seed
+```
+
+O script remove somente os leads fictícios identificados com e-mails `@demo.vertice.local` e os insere novamente. Leads cadastrados manualmente não são removidos.
+
 ### Frontend
 
 Em outro terminal:
@@ -131,7 +142,7 @@ O frontend ficará disponível em `http://localhost:3000`.
 
 ## Demonstração
 
-As capturas reais e o GIF do fluxo principal serão adicionados com dados fictícios antes do deploy público.
+Execute `npm run seed` para preencher o pipeline com oportunidades fictícias antes de capturar as evidências visuais. As capturas reais e o GIF do fluxo principal serão adicionados antes do deploy público.
 
 ## Autor
 
