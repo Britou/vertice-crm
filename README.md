@@ -22,8 +22,7 @@ O Vértice centraliza o cadastro de contatos comerciais, acompanha o estágio de
 
 ## Próximas entregas
 
-- Dados fictícios para demonstração.
-- Capturas reais da aplicação e GIF do fluxo principal.
+- GIF do fluxo principal.
 - Deploy público.
 - Autenticação e controle de acesso.
 
@@ -142,7 +141,17 @@ O frontend ficará disponível em `http://localhost:3000`.
 
 ## Demonstração
 
-Execute `npm run seed` para preencher o pipeline com oportunidades fictícias antes de capturar as evidências visuais. As capturas reais e o GIF do fluxo principal serão adicionados antes do deploy público.
+### Dashboard e pipeline
+
+![Dashboard do Vértice](web/public/screenshots/dashboard-desktop.png)
+
+Visão geral com métricas, busca, filtros e oportunidades distribuídas pelas etapas do pipeline.
+
+### Experiência responsiva
+
+![Pipeline responsivo do Vértice](web/public/screenshots/pipeline-mobile.png)
+
+No celular, a pipeline exibe uma etapa por vez e permite navegar entre as cinco etapas sem rolagem horizontal.
 
 ## Autor
 
