@@ -13,6 +13,7 @@ O Vértice centraliza o cadastro de contatos comerciais, acompanha o estágio de
 - Cadastro de leads com validação de formulário.
 - Listagem de leads persistidos no MongoDB Atlas.
 - Atualização do status comercial: Novo, Em contato, Proposta, Ganho e Perdido.
+- Pipeline visual responsivo com cinco etapas e navegação de uma etapa por vez no celular.
 - Exclusão de leads.
 - Busca por nome, empresa, e-mail ou telefone.
 - Filtro por status.
@@ -21,7 +22,6 @@ O Vértice centraliza o cadastro de contatos comerciais, acompanha o estágio de
 
 ## Próximas entregas
 
-- Pipeline visual de oportunidades.
 - Dados fictícios para demonstração.
 - Capturas reais da aplicação e GIF do fluxo principal.
 - Deploy público.
@@ -131,7 +131,7 @@ O frontend ficará disponível em `http://localhost:3000`.
 
 ## Demonstração
 
-As capturas reais e o GIF do fluxo principal serão adicionados após a conclusão do pipeline visual.
+As capturas reais e o GIF do fluxo principal serão adicionados com dados fictícios antes do deploy público.
 
 ## Autor
 
