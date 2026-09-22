@@ -22,7 +22,6 @@ O Vértice centraliza o cadastro de contatos comerciais, acompanha o estágio de
 
 ## Próximas entregas
 
-- GIF do fluxo principal.
 - Deploy público.
 - Autenticação e controle de acesso.
 
@@ -152,6 +151,12 @@ Visão geral com métricas, busca, filtros e oportunidades distribuídas pelas e
 ![Pipeline responsivo do Vértice](web/public/screenshots/pipeline-mobile.png)
 
 No celular, a pipeline exibe uma etapa por vez e permite navegar entre as cinco etapas sem rolagem horizontal.
+
+### Fluxo principal
+
+![Atualização de status de um lead](web/public/screenshots/lead-status-update.gif)
+
+O GIF evidencia Lucas Nogueira sendo movido de “Novos” para “Em contato”, com a atualização imediata das quantidades da pipeline.
 
 ## Autor
 
