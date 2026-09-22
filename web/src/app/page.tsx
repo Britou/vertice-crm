@@ -3,7 +3,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, LoaderCircle, Plus, Search, Trash2, Users, X, } from "lucide-react";
+import { Building2, LoaderCircle, Plus, Search, X } from "lucide-react";
+import { LeadPipeline } from "@/components/LeadPipeline";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -208,7 +209,7 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[360px_1fr]">
+      <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 xl:grid-cols-[320px_minmax(0,1fr)]">
         <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-6">
             <p className="text-sm font-semibold text-violet-700">
@@ -288,7 +289,7 @@ export default function Home() {
           </form>
         </aside>
 
-        <section>
+        <section className="min-w-0">
           <div className="mb-8">
             <p className="text-sm font-semibold text-violet-700">Visão geral</p>
             <h2 className="mt-1 text-3xl font-bold tracking-tight">
@@ -350,93 +351,38 @@ export default function Home() {
             </select>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-              <div>
-                <h3 className="font-bold">Leads recentes</h3>
-                <p className="text-sm text-slate-500">
-                  Exibindo {filteredLeads.length} de {leads.length} leads
-                </p>
-              </div>
-              <Users className="h-5 w-5 text-slate-400" />
-            </div>
-
-            {isLoading ? (
-              <div className="flex items-center justify-center gap-2 p-12 text-slate-500">
-                <LoaderCircle className="h-5 w-5 animate-spin" />
-                Carregando leads...
-              </div>
-            ) : leads.length === 0 ? (
-              <div className="p-12 text-center">
-                <Building2 className="mx-auto h-10 w-10 text-slate-300" />
-                <h4 className="mt-4 font-bold">Nenhum lead cadastrado</h4>
-                <p className="mt-1 text-sm text-slate-500">
-                  Use o formulário para registrar a primeira oportunidade.
-                </p>
-              </div>
-            ) : filteredLeads.length === 0 ? (
-              <div className="p-12 text-center">
-                <Search className="mx-auto h-10 w-10 text-slate-300" />
-                <h4 className="mt-4 font-bold">Nenhum resultado encontrado</h4>
-                <p className="mt-1 text-sm text-slate-500">
-                  Ajuste a busca ou selecione outro status.
-                </p>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-              {filteredLeads.map((lead) => (
-                  <article
-                    className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"
-                    key={lead._id}
-                  >
-                    <div>
-                      <h4 className="font-bold">{lead.name}</h4>
-                      <p className="text-sm text-slate-500">
-                        {lead.company} · {sourceLabels[lead.source]}
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-slate-700">
-                        {formatCurrency(lead.estimatedValue)}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <select
-                        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold"
-                        disabled={isUpdatingId === lead._id}
-                        onChange={(event) =>
-                          void updateLeadStatus(
-                            lead._id,
-                            event.target.value as LeadStatus,
-                          )
+                    {isLoading ? (
+                      <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white p-12 text-slate-500 shadow-sm">
+                        <LoaderCircle className="h-5 w-5 animate-spin" />
+                        Carregando leads...
+                      </div>
+                    ) : leads.length === 0 ? (
+                      <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+                        <Building2 className="mx-auto h-10 w-10 text-slate-300" />
+                        <h4 className="mt-4 font-bold">Nenhum lead cadastrado</h4>
+                        <p className="mt-1 text-sm text-slate-500">
+                          Use o formulário para registrar a primeira oportunidade.
+                        </p>
+                      </div>
+                    ) : filteredLeads.length === 0 ? (
+                      <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+                        <Search className="mx-auto h-10 w-10 text-slate-300" />
+                        <h4 className="mt-4 font-bold">Nenhum resultado encontrado</h4>
+                        <p className="mt-1 text-sm text-slate-500">
+                          Ajuste a busca ou selecione outro status.
+                        </p>
+                      </div>
+                    ) : (
+                      <LeadPipeline
+                        isDeletingId={isDeletingId}
+                        isUpdatingId={isUpdatingId}
+                        leads={filteredLeads}
+                        onDelete={(id) => void deleteLead(id)}
+                        onStatusChange={(id, status) =>
+                          void updateLeadStatus(id, status)
                         }
-                        value={lead.status}
-                      >
-                        {leadStatuses.map((status) => (
-                          <option key={status} value={status}>
-                            {statusLabels[status]}
-                          </option>
-                        ))}
-                      </select>
-
-                      <button
-                        aria-label={`Excluir ${lead.name}`}
-                        className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                        disabled={isDeletingId === lead._id}
-                        onClick={() => void deleteLead(lead._id)}
-                        type="button"
-                      >
-                        {isDeletingId === lead._id ? (
-                          <LoaderCircle className="h-5 w-5 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-5 w-5" />
-                        )}
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </div>
+                      />
+                    )}
         </section>
       </div>
     </main>
